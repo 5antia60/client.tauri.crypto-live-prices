@@ -1,0 +1,25 @@
+graph LR
+  subgraph Frontend[React + TypeScript (src/)]
+    UI[UI Components\n(Header, CryptoList, SearchBar, Settings)]
+    APIClient[CoinGecko client\n(src/api.ts)]
+    Storage[localStorage\n(src/storage.ts)]
+  end
+
+  subgraph WebView[Tauri WebView]
+    UI
+  end
+
+  subgraph Native[Rust runtime (src-tauri/)]
+    NativeCmds[Native commands & IPC\n(lib.rs)]
+    Tray[System tray & menu\n(tray.rs)]
+  end
+
+  UI -->|HTTP| APIClient -->|HTTPS| CoinGecko(("CoinGecko API"))
+  UI --> Storage
+  UI -->|invoke / emit events (IPC)| NativeCmds
+  NativeCmds -->|manages| Tray
+  NativeCmds -->|emit event: refresh-prices| UI
+  CoinGecko -.->|public API / rate limits| APIClient
+
+  classDef external fill:#f9f,stroke:#333,stroke-width:1px;
+  class CoinGecko external;
