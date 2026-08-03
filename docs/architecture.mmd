@@ -1,25 +1,38 @@
-graph LR
-  subgraph Frontend[React + TypeScript (src/)]
-    UI[UI Components\n(Header, CryptoList, SearchBar, Settings)]
-    APIClient[CoinGecko client\n(src/api.ts)]
-    Storage[localStorage\n(src/storage.ts)]
-  end
+flowchart TB
+    subgraph UserSpace["User Space"]
+        TrayIcon["🖱️ System Tray Icon"]
+    end
 
-  subgraph WebView[Tauri WebView]
-    UI
-  end
+    subgraph TauriApp["CryptoTray Application"]
+        subgraph Frontend["Frontend Layer (WebView)"]
+            ReactApp["⚛️ React + TypeScript App"]
+            Components["🧩 UI Components"]
+            ApiClient["📡 CoinGecko API Client<br/>(src/api.ts)"]
+            Storage["💾 LocalStorage Persistence<br/>(src/storage.ts)"]
+        end
 
-  subgraph Native[Rust runtime (src-tauri/)]
-    NativeCmds[Native commands & IPC\n(lib.rs)]
-    Tray[System tray & menu\n(tray.rs)]
-  end
+        subgraph Backend["Native Runtime Layer (Rust)"]
+            TauriCore["🦀 Tauri Runtime Core"]
+            TrayModule["🗂️ Tray & Window Manager<br/>(src-tauri/src/tray.rs)"]
+            Commands["⚙️ Native Commands<br/>get_autostart_status / set_autostart"]
+            AutostartPlugin["🔌 Autostart Plugin"]
+            ShellPlugin["🔌 Shell Plugin"]
+        end
+    end
 
-  UI -->|HTTP| APIClient -->|HTTPS| CoinGecko(("CoinGecko API"))
-  UI --> Storage
-  UI -->|invoke / emit events (IPC)| NativeCmds
-  NativeCmds -->|manages| Tray
-  NativeCmds -->|emit event: refresh-prices| UI
-  CoinGecko -.->|public API / rate limits| APIClient
+    subgraph External["External Services"]
+        CoinGecko["🌐 CoinGecko API<br/>api.coingecko.com/api/v3"]
+        OS["💻 Operating System<br/>(autostart registry/plist)"]
+    end
 
-  classDef external fill:#f9f,stroke:#333,stroke-width:1px;
-  class CoinGecko external;
+    %% Interactions
+    TrayIcon <-- click / toggle --> TrayModule
+    TrayModule <-- position & lifecycle --> TauriCore
+    ReactApp <-- IPC: invoke / listen --> Commands
+    Commands --> AutostartPlugin
+    AutostartPlugin --> OS
+    ReactApp --> Components
+    ReactApp --> ApiClient
+    ApiClient -->|HTTP GET| CoinGecko
+    ReactApp --> Storage
+    Storage -.->|cryptotray_prefs| LocalDisk[(🗄️ Local Disk)]

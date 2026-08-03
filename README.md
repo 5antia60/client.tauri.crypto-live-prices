@@ -36,7 +36,45 @@ This is a Tauri v2 application: a React + TypeScript frontend runs inside a nati
 
 Architecture diagram (rendered):
 
-![Architecture diagram](docs/architecture.svg)
+```mermaid
+flowchart TB
+    subgraph UserSpace["User Space"]
+        TrayIcon["System Tray Icon"]
+    end
+
+    subgraph TauriApp["CryptoTray Application"]
+        subgraph Frontend["Frontend Layer (WebView)"]
+            ReactApp["React + TypeScript App"]
+            Components["UI Components"]
+            ApiClient["CoinGecko API Client (src/api.ts)"]
+            Storage["LocalStorage Persistence (src/storage.ts)"]
+        end
+
+        subgraph Backend["Native Runtime Layer (Rust)"]
+            TauriCore["Tauri Runtime Core"]
+            TrayModule["Tray & Window Manager (src-tauri/src/tray.rs)"]
+            Commands["Native Commands: get_autostart_status / set_autostart"]
+            AutostartPlugin["Autostart Plugin"]
+            ShellPlugin["Shell Plugin"]
+        end
+    end
+
+    subgraph External["External Services"]
+        CoinGecko["CoinGecko API (api.coingecko.com/api/v3)"]
+        OS["Operating System (autostart registry/plist)"]
+    end
+
+    TrayIcon <-- click / toggle --> TrayModule
+    TrayModule <-- position & lifecycle --> TauriCore
+    ReactApp <-- IPC: invoke / listen --> Commands
+    Commands --> AutostartPlugin
+    AutostartPlugin --> OS
+    ReactApp --> Components
+    ReactApp --> ApiClient
+    ApiClient -->|HTTP GET| CoinGecko
+    ReactApp --> Storage
+    Storage -.->|cryptotray_prefs| LocalDisk[(Local Disk)]
+```
 
 Mermaid source: `docs/architecture.mmd` (included in the repository).
 
