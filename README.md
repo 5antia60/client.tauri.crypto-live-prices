@@ -34,35 +34,11 @@ Defaults: watchlist = `bitcoin`, currency = `usd`, refresh interval = 60s.
 
 This is a Tauri v2 application: a React + TypeScript frontend runs inside a native WebView while Rust implements system tray integration and native services.
 
-Architecture diagram (block diagram in Mermaid):
+Architecture diagram (rendered):
 
-```mermaid
-graph LR
-  subgraph Frontend[React + TypeScript (src/)]
-    UI[UI Components\n(Header, CryptoList, SearchBar, Settings)]
-    APIClient[CoinGecko client\n(src/api.ts)]
-    Storage[localStorage\n(src/storage.ts)]
-  end
+![Architecture diagram](docs/architecture.svg)
 
-  subgraph WebView[Tauri WebView]
-    UI
-  end
-
-  subgraph Native[Rust runtime (src-tauri/)]
-    NativeCmds[Native commands & IPC\n(lib.rs)]
-    Tray[System tray & menu\n(tray.rs)]
-  end
-
-  UI -->|HTTP| APIClient -->|HTTPS| CoinGecko[(CoinGecko API)]
-  UI --> Storage
-  UI -->|invoke / emit events (IPC)| NativeCmds
-  NativeCmds -->|manages| Tray
-  NativeCmds -->|emit event: refresh-prices| UI
-  CoinGecko -.->|public API / rate limits| APIClient
-
-  classDef external fill:#f9f,stroke:#333,stroke-width:1px;
-  class CoinGecko external;
-```
+Mermaid source: `docs/architecture.mmd` (included in the repository).
 
 Notes:
 
