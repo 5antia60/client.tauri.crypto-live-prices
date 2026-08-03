@@ -32,22 +32,44 @@ Defaults: watchlist = `bitcoin`, currency = `usd`, refresh interval = 60s.
 
 ## Architecture
 
-This is a Tauri v2 application where a React + TypeScript frontend runs inside a native WebView and Rust handles tray integration and native services.
+This is a Tauri v2 application: a React + TypeScript frontend runs inside a native WebView while Rust implements system tray integration and native services.
 
-Architecture sketch:
+Architecture diagram (block diagram in Mermaid):
 
-React + TypeScript (src/)
-  |-- UI, state and localStorage
-  |-- HTTP fetches to api.coingecko.com
-  v
-Tauri WebView
-  |-- events / IPC
-  v
-Rust (src-tauri/)
-  |-- system tray and window lifecycle
-  |-- autostart integration via plugin
-  v
-OS
+```mermaid
+graph LR
+  subgraph Frontend[React + TypeScript (src/)]
+    UI[UI Components\n(Header, CryptoList, SearchBar, Settings)]
+    APIClient[CoinGecko client\n(src/api.ts)]
+    Storage[localStorage\n(src/storage.ts)]
+  end
+
+  subgraph WebView[Tauri WebView]
+    UI
+  end
+
+  subgraph Native[Rust runtime (src-tauri/)]
+    NativeCmds[Native commands & IPC\n(lib.rs)]
+    Tray[System tray & menu\n(tray.rs)]
+  end
+
+  UI -->|HTTP| APIClient -->|HTTPS| CoinGecko[(CoinGecko API)]
+  UI --> Storage
+  UI -->|invoke / emit events (IPC)| NativeCmds
+  NativeCmds -->|manages| Tray
+  NativeCmds -->|emit event: refresh-prices| UI
+  CoinGecko -.->|public API / rate limits| APIClient
+
+  classDef external fill:#f9f,stroke:#333,stroke-width:1px;
+  class CoinGecko external;
+```
+
+Notes:
+
+- The WebView hosts the React app; frontend code runs in the embedded browser context and performs HTTP requests directly to CoinGecko.
+- IPC (Tauri invoke/listen) is used for native integration: the Rust side exposes commands like `get_autostart_status` and `set_autostart`, and listens/emits events such as `refresh-prices`.
+- Persistence is localStorage-based; there is no remote data store.
+- The Rust runtime is responsible for tray/menu, window lifecycle, positioning and autostart; it does not store market data.
 
 Responsibility map:
 
