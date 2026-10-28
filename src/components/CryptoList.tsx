@@ -1,4 +1,5 @@
 import type { CryptoAsset, Currency } from '../types.ts';
+import { Icon } from './Icon.tsx';
 
 interface CryptoItemProps {
   asset: CryptoAsset;
@@ -40,10 +41,10 @@ function CryptoItem({ asset, currency, onRemove }: CryptoItemProps) {
   const isPositive = change >= 0;
 
   return (
-    <div className="crypto-item">
+    <li className="crypto-item">
       <div className="crypto-icon-wrap">
         {asset.image ? (
-          <img src={asset.image} alt={asset.name} className="crypto-icon" />
+          <img src={asset.image} alt="" className="crypto-icon" width="36" height="36" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
         ) : (
           <span className="crypto-icon-placeholder">{asset.symbol[0]}</span>
         )}
@@ -55,17 +56,19 @@ function CryptoItem({ asset, currency, onRemove }: CryptoItemProps) {
       <div className="crypto-price-wrap">
         <span className="crypto-price">{formatPrice(price, currency)}</span>
         <span className={`crypto-change ${isPositive ? 'positive' : 'negative'}`}>
-          {isPositive ? '▲' : '▼'} {Math.abs(change).toFixed(2)}%
+          <Icon name={isPositive ? 'arrow-up' : 'arrow-down'} />
+          <span>{isPositive ? '+' : '−'}{Math.abs(change).toFixed(2)}%</span>
         </span>
       </div>
       <button
         className="remove-btn"
         onClick={() => onRemove(asset.id)}
         title={`Remover ${asset.name}`}
+        aria-label={`Remover ${asset.name}`}
       >
-        ×
+        <Icon name="close" />
       </button>
-    </div>
+    </li>
   );
 }
 
@@ -75,23 +78,25 @@ interface CryptoListProps {
   onRemove: (id: string) => void;
   loading: boolean;
   error: string | null;
+  onRetry: () => void;
 }
 
-export function CryptoList({ assets, currency, onRemove, loading, error }: CryptoListProps) {
+export function CryptoList({ assets, currency, onRemove, loading, error, onRetry }: CryptoListProps) {
   if (loading && assets.length === 0) {
     return (
-      <div className="list-state">
-        <div className="spinner" />
-        <span>Carregando cotações...</span>
+      <div className="crypto-list loading-list" role="status" aria-label="Carregando cotações">
+        {[0, 1, 2].map((item) => <div className="skeleton-row" key={item} aria-hidden="true"><span className="skeleton skeleton-icon" /><span className="skeleton-copy"><span className="skeleton skeleton-name" /><span className="skeleton skeleton-symbol" /></span><span className="skeleton skeleton-price" /></div>)}
       </div>
     );
   }
 
   if (error && assets.length === 0) {
     return (
-      <div className="list-state error">
-        <span className="error-icon">⚠</span>
-        <span>{error}</span>
+      <div className="list-state error" role="alert">
+        <span className="state-icon"><Icon name="alert" /></span>
+        <h2>Não foi possível atualizar</h2>
+        <p>{error}</p>
+        <button className="retry-btn" onClick={onRetry}>Tentar novamente</button>
       </div>
     );
   }
@@ -99,27 +104,30 @@ export function CryptoList({ assets, currency, onRemove, loading, error }: Crypt
   if (assets.length === 0) {
     return (
       <div className="list-state empty">
-        <span>Nenhuma criptomoeda adicionada.</span>
-        <span className="hint">Use a busca abaixo para adicionar.</span>
+        <span className="state-icon"><Icon name="list" /></span>
+        <h2>Sua lista começa aqui</h2>
+        <p>Busque uma criptomoeda abaixo para acompanhar suas cotações.</p>
       </div>
     );
   }
 
   return (
-    <div className="crypto-list">
-      {assets.map((asset) => (
+    <main className="crypto-list" aria-label="Cotações da sua lista" aria-busy={loading}>
+      <ul className="crypto-items">
+        {assets.map((asset) => (
         <CryptoItem
           key={asset.id}
           asset={asset}
           currency={currency}
           onRemove={onRemove}
         />
-      ))}
+        ))}
+      </ul>
       {error && (
-        <div className="list-error-bar">
-          <span>⚠ {error}</span>
+        <div className="list-error-bar" role="alert">
+          <Icon name="alert" /><span>{error} Os valores exibidos são da última atualização.</span>
         </div>
       )}
-    </div>
+    </main>
   );
 }

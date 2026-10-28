@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { isTauri } from '@tauri-apps/api/core';
 import { fetchPrices } from './api.ts';
 import { loadPreferences, savePreferences } from './storage.ts';
 import type { CryptoAsset, Currency, AppPreferences } from './types.ts';
@@ -53,8 +54,8 @@ function App() {
 
   // Initial load
   useEffect(() => {
-    refreshPrices(prefs.watchlist);
-  }, []);
+    refreshPrices();
+  }, [refreshPrices]);
 
   // Auto-refresh interval
   useEffect(() => {
@@ -69,6 +70,7 @@ function App() {
 
   // Listen to tray "refresh" event from Rust
   useEffect(() => {
+    if (!isTauri()) return;
     const unlisten = listen('refresh-prices', () => {
       refreshPrices();
     });
@@ -114,23 +116,9 @@ function App() {
         lastUpdated={lastUpdated}
         loading={loading}
         onRefresh={() => refreshPrices()}
+        onOpenSettings={() => setShowSettings(true)}
+        count={prefs.watchlist.length}
       />
-
-      <div className="app-toolbar">
-        <button
-          className="settings-btn"
-          onClick={() => setShowSettings(true)}
-          title="Configurações"
-        >
-          ⚙
-        </button>
-        {lastUpdated && !loading && (
-          <span className="last-updated">
-            Atualizado {new Date(lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        )}
-        {loading && <span className="updating-label">Atualizando...</span>}
-      </div>
 
       <CryptoList
         assets={assets}
@@ -138,9 +126,18 @@ function App() {
         onRemove={handleRemoveCoin}
         loading={loading}
         error={error}
+        onRetry={() => refreshPrices()}
       />
 
+      <div className={`market-status ${error ? 'has-error' : ''}`}>
+        <span className="status-message" role="status">
+          <span className={`status-dot ${loading ? 'is-loading' : ''}`} aria-hidden="true" />
+          {loading ? 'Atualizando cotações...' : error ? 'Atualização indisponível' : prefs.watchlist.length === 0 ? 'Aguardando sua primeira moeda' : lastUpdated ? `Atualizado às ${new Date(lastUpdated).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Aguardando cotações'}
+        </span>
+        <span className="refresh-cadence">a cada {prefs.refreshInterval < 60 ? `${prefs.refreshInterval}s` : `${prefs.refreshInterval / 60} min`}</span>
+      </div>
       <SearchBar watchlist={prefs.watchlist} onAdd={handleAddCoin} />
+      <footer className="app-footer"><span>Dados por CoinGecko</span><span>Cotações informativas</span></footer>
 
       {showSettings && (
         <Settings
