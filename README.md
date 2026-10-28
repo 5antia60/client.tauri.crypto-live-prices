@@ -148,6 +148,14 @@ npm run dev
 
 Note: features that rely on the native runtime (tray, autostart) are unavailable in the pure web mode.
 
+### UI regression checks
+
+Run `npx playwright install chromium` once, then `npm test`. Browser tests use deterministic CoinGecko fixtures rather than live prices and cover currency persistence, search, keyboard navigation, settings, error recovery and the compact layout.
+
+With the Vite server running, `node tests/visual-review.mjs` captures native-size, narrow, desktop, search, settings and empty-state previews under `test-results/visual-review/`. Prices in those previews are synthetic test data. Native tray and autostart integration require a separate desktop check.
+
+On Windows, build the debug executable with `npm run tauri:build -- --debug --no-bundle`, then run `npm run test:native`. This launches a dedicated Tauri/WebView2 process with an isolated temporary profile and a loopback-only debugging endpoint. It checks native IPC, autostart status (read only), settings, refresh events and close/hide/reopen behavior, then stops the process it created. Quotes are synthetic fixtures; OS autostart settings and the normal app profile are not changed. Physical tray clicks and installer behavior remain manual checks.
+
 ## Scripts
 
 | Script | Purpose |
